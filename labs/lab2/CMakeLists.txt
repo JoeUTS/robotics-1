@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.8)
-project(tutorial1)
+project(lab2)
 
 if(CMAKE_COMPILER_IS_GNUCXX OR CMAKE_CXX_COMPILER_ID MATCHES "Clang")
   add_compile_options(-Wall -Wextra -Wpedantic)
@@ -9,32 +9,29 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
-find_package(sensor_msgs REQUIRED)
-find_package(image_transport REQUIRED)
-find_package(cv_bridge REQUIRED)
-find_package(OpenCV REQUIRED)
+
 
 #rosidl_generate_interfaces(${PROJECT_NAME}
+# empty - place custom messages and services here
 #)
 
-set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "sensor_msgs" "image_transport" "cv_bridge" "OpenCV")
+set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "sensor_msgs")
 
-set(image_converter_SRCS
-  src/imageconverter.cpp
-  src/main.cpp
+set(EXE_NAME_SRCS
+  # nil
 )
 
-set(image_converter_HDRS
-  include/imageconverter.h
+set(EXE_NAME_HDRS
+  # nil
 )
 
 #rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 
-add_executable(image_converter ${image_converter_SRCS} ${image_converter_MOCS})
-ament_target_dependencies(image_converter ${dependencies})
-target_link_libraries(image_converter "${cpp_typesupport_target}")
+add_executable(EXE_NAME ${EXE_NAME_SRCS} ${EXE_NAME_MOCS})
+ament_target_dependencies(EXE_NAME ${dependencies})
+target_link_libraries(EXE_NAME "${cpp_typesupport_target}")
 
-install(TARGETS image_converter
+install(TARGETS EXE_NAME
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch
