@@ -1,0 +1,10 @@
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/uninstall.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/tutorial1_uninstall.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/draw_node.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/test.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/edit_cache.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/rebuild_cache.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/list_install_components.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/install.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/install/local.dir
+/home/joseph/ros2_ws/src/tutorial1/build/CMakeFiles/install/strip.dir
