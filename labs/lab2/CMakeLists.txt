@@ -9,6 +9,7 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(sensor_msgs REQUIRED)
 
 
 #rosidl_generate_interfaces(${PROJECT_NAME}
@@ -17,21 +18,22 @@ find_package(std_msgs REQUIRED)
 
 set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "sensor_msgs")
 
-set(EXE_NAME_SRCS
-  # nil
+set(perception_SRCS
+  src/perception.cpp
+  src/main.cpp
 )
 
-set(EXE_NAME_HDRS
-  # nil
+set(perception_HDRS
+  include/perception.h
 )
 
 #rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
 
-add_executable(EXE_NAME ${EXE_NAME_SRCS} ${EXE_NAME_MOCS})
-ament_target_dependencies(EXE_NAME ${dependencies})
-target_link_libraries(EXE_NAME "${cpp_typesupport_target}")
+add_executable(perception ${perception_SRCS} ${perception_MOCS})
+ament_target_dependencies(perception ${dependencies})
+target_link_libraries(perception "${cpp_typesupport_target}")
 
-install(TARGETS EXE_NAME
+install(TARGETS perception
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY launch
