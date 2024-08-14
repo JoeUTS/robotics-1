@@ -3,6 +3,7 @@
 
 #include <functional>
 #include <string>
+#include <cmath>
 
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>

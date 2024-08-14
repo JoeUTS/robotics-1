@@ -14,13 +14,32 @@ void perception::laserCallback(const std::shared_ptr<sensor_msgs::msg::LaserScan
 }
 
 void perception::laserProcessing() {
-    // convert vector index to angle
+    double minAngle = -M_PI_4;
+    double maxAngle = M_PI_4;
+    std::vector<double> newRanges;
+
     // display range of scan
     for (int i = 0; i < laserScan_.ranges.size(); i++) {
-        double angle = ((i * laserScan_.angle_increment) - laserScan_.angle_min) * 180 / M_PI;
-        RCLCPP_INFO_STREAM(this->get_logger(), "range[" << angle << "°]: " << laserScan_.ranges.at(i));
+        // set invalid ranges to -1 cause I can
+        // NaN and inf
+        if (std::isnan(laserScan_.ranges.at(i)) || std::isinf(laserScan_.ranges.at(i))) {
+            laserScan_.ranges.at(i) = -1;
+        }
+
+        // out of range
+        if (laserScan_.ranges.at(i) < laserScan_.range_min || laserScan_.ranges.at(i) > laserScan_.range_max) {
+            laserScan_.ranges.at(i) = -1;
+        }
+
+        double angle = ((i * laserScan_.angle_increment) - laserScan_.angle_min);
+
+        RCLCPP_INFO_STREAM(this->get_logger(), "range[" << angle << " rad]: " << laserScan_.ranges.at(i));
+
+        if (angle >= minAngle && angle <= maxAngle) {
+            newRanges.push_back(laserScan_.ranges.at(i));
+        }
     }
 
     // republish data from -pi/4 to pi/4
-    std::shared_ptr<sensor_msgs::msg::LaserScan> repub; // finish this by setting it on call
+    std::shared_ptr<sensor_msgs::msg::LaserScan> repub;
 }
