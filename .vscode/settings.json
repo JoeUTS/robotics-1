@@ -1,8 +1,3 @@
 {
-    "cmake.sourceDirectory": "/home/joseph/git/robotics-1/labs",
-    "cmake.ignoreCMakeListsMissing": true,
-    "files.associations": {
-        "functional": "cpp",
-        "string": "cpp"
-    }
+    "cmake.ignoreCMakeListsMissing": true
 }
