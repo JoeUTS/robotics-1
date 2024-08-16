@@ -1,87 +1,82 @@
 #!/usr/bin/env python3
 
 import os
+
 from ament_index_python.packages import get_package_share_directory
-from launch import LaunchDescription
 from launch_ros.actions import Node
+from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription
 from launch.launch_description_sources import PythonLaunchDescriptionSource
 from launch.substitutions import LaunchConfiguration
 
-# NOTE: This code is just a modified version of the turtlebot3_gazebo empty_world launch file
-
 def generate_launch_description():
-    # launch file location
-    launch_file_dir = os.path.join(
-        get_package_share_directory('sprint1'),
-        'launch'
-    )
-    
-    # gazebo file location
-    pkg_gazebo_ros = get_package_share_directory('gazebo_ros')
+    ld = LaunchDescription()
 
-    # define world
-    world = os.path.join(
-        os.path.dirname(__file__),
-        '../worlds/test_world.world'
-    )
-
-    # set default parameters
+    # settings
+    robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     x_pose = LaunchConfiguration('x_pose', default='9.0')
     y_pose = LaunchConfiguration('y_pose', default='-8.0')
-    yaw_pose = LaunchConfiguration('yaw_pose', default='1.570796')
+    world = os.path.join(
+        get_package_share_directory('sprint1'),
+        'worlds',
+        'test_world.world'
+    )
+    rviz_config_file = os.path.join(
+        get_package_share_directory('sprint1'),
+        'rviz',
+        'test_config.rviz'
+    )
 
-    # assuming to be a gazebo thing
+    # nodes
+    example_node = Node(
+        package="sprint1",
+        executable="example_node"
+    )
+
+    rviz_node = Node(
+            package="rviz2",
+            executable="rviz2",
+            name="rviz2",
+            output="log",
+            arguments=["-d", rviz_config_file],
+    )
+
+    # gazebo
     gzserver_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(pkg_gazebo_ros,
-            'launch',
-            'gzserver.launch.py'
-            )
+            os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gzserver.launch.py')
         ),
         launch_arguments={'world': world}.items()
     )
 
-    # assuming to be a gazebo thing
     gzclient_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(pkg_gazebo_ros,
-            'launch',
-            'gzclient.launch.py'
-            )
+            os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gzclient.launch.py')
         )
     )
 
-    # need to include
+    # robot
     robot_state_publisher_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(launch_file_dir, 'robot_state_publisher.launch.py')
+            os.path.join(robotLaunch, 'robot_state_publisher.launch.py')
         ),
         launch_arguments={'use_sim_time': use_sim_time}.items()
     )
 
-    # spawns in turtlebot at predefined location
     spawn_turtlebot_cmd = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(launch_file_dir, 'spawn_turtlebot3.launch.py')
+            os.path.join(robotLaunch, 'spawn_turtlebot3.launch.py')
         ),
         launch_arguments={
             'x_pose': x_pose,
-            'y_pose': y_pose,
-            'yaw_pose': yaw_pose
+            'y_pose': y_pose
         }.items()
     )
 
-    ld = LaunchDescription([Node(
-            package='sprint1',
-            namespace='example_node',
-            executable='example_node',
-            name='sim'
-        )
-    ])
-
-    # Add the commands to the launch description
+    # add actions to launch
+    ld.add_action(example_node)
+    ld.add_action(rviz_node)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(robot_state_publisher_cmd)

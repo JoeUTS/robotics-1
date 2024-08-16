@@ -18,8 +18,10 @@ void ExampleNode::laserCallback(const std::shared_ptr<sensor_msgs::msg::LaserSca
     }
 
     nCounter_++;
+    RCLCPP_INFO_STREAM(this->get_logger(), "counter: " << nCounter_);
 
-    if (nCounter_ == N_VAL) {
+    if (nCounter_ >= N_VAL) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "publishing messge");
         pub_ranges_->publish(laserPointer_->getLastMsg());
         nCounter_ = 0;
     }
