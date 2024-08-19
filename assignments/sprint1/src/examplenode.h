@@ -1,6 +1,17 @@
 #ifndef EXAMPLENODE_H
 #define EXAMPLENODE_H
 
+/**
+ * @file examplenode.h
+ * @author Joseph Tarbath (joseph.a.tarbath@student.uts.edu.au)
+ * @brief Generic node template
+ * @version 0.1
+ * @date 2024-08-19
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
+
 #include <functional>
 #include <cmath>
 
@@ -13,18 +24,24 @@
 class ExampleNode : public rclcpp::Node {
 
 public:
-    ExampleNode();
+    /**
+     * @brief Construct a new example Node object.
+     * 
+     */
+    ExampleNode(void);
 
+private:
+    /**
+     * @brief handles ROS laser callback to update laser scan object.
+     * 
+     * @param msg laser scan message.
+     */
     void laserCallback(const std::shared_ptr<sensor_msgs::msg::LaserScan> msg);
 
-    sensor_msgs::msg::LaserScan laserScan_; // laser scan data
-    std::unique_ptr<SimpleLaser> laserPointer_;    //!< Pointer to the laser processing object
+    std::unique_ptr<SimpleLaser> laserPointer_;    //!< Laser scan processing object.
 
-    unsigned int nCounter_;  // counter to track message number
-    const unsigned int N_VAL;   // n value to return scan msg
-
-    rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr sub_laserscan_;    // laser scan sub
-    rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr pub_ranges_;          // laser scan pub
+    rclcpp::Subscription<sensor_msgs::msg::LaserScan>::SharedPtr sub_laserscan_;    // laser scan subscriber
+    rclcpp::Publisher<sensor_msgs::msg::LaserScan>::SharedPtr pub_ranges_;          // laser scan publisher
 };
 
 #endif // EXAMPLENODE_H

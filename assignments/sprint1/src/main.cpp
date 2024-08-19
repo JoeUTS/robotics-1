@@ -1,3 +1,13 @@
+/**
+ * @file main.cpp
+ * @author Joseph Tarbath (joseph.a.tarbath@student.uts.edu.au)
+ * @brief Main file for example node template
+ * @version 0.1
+ * @date 2024-08-19
+ * 
+ * @copyright Copyright (c) 2024
+ * 
+ */
 #include <rclcpp/rclcpp.hpp>
 
 #include "examplenode.h"
