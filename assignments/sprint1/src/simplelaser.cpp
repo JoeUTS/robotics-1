@@ -26,17 +26,20 @@ sensor_msgs::msg::LaserScan SimpleLaser::getLastMsg(void) {
 }
 
 sensor_msgs::msg::LaserScan SimpleLaser::getNthPoint(const int N) {
-    std::vector<float> newRanges;   // holds new set of ranges
-
     // make local copy of laserScan_
     std::unique_lock<std::mutex> lck(mtx_);
     sensor_msgs::msg::LaserScan newScan = laserScan_;
     lck.unlock();
 
     // find new set of ranages
-    for (int i = 0; i < newScan.ranges.size(); i = i + N) {
+    std::vector<float> newRanges;
+
+    for (int i = 0; i < newScan.ranges.size(); i += N) {
         newRanges.push_back(newScan.ranges.at(i));
     }
+
+    // update increment angle
+    newScan.angle_increment *= N;
 
     // update laser message with new ranges
     newScan.ranges.clear();
