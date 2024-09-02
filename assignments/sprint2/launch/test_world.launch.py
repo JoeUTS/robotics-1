@@ -14,9 +14,7 @@ def generate_launch_description():
 
     # settings
     robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
-    use_sim_time = LaunchConfiguration('use_sim_time',
-                                       default='true',
-                                       description='Use simulation/Gazebo clock')
+    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     x_pose = LaunchConfiguration('x_pose', default='9.0')
     y_pose = LaunchConfiguration('y_pose', default='-8.0')
     world = os.path.join(

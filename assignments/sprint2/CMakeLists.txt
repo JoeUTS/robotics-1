@@ -37,10 +37,7 @@ target_link_libraries(example_node "${cpp_typesupport_target}")
 install(TARGETS example_node
   DESTINATION lib/${PROJECT_NAME})
 
-install(DIRECTORY launch
-  DESTINATION share/${PROJECT_NAME})
-
-install(DIRECTORY rviz
+install(DIRECTORY launch rviz config map worlds
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
