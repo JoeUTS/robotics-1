@@ -14,23 +14,30 @@ def generate_launch_description():
 
     # settings
     robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    use_sim_time = LaunchConfiguration('use_sim_time',
+                                       default='true',
+                                       description='Use simulation/Gazebo clock')
     x_pose = LaunchConfiguration('x_pose', default='9.0')
     y_pose = LaunchConfiguration('y_pose', default='-8.0')
     world = os.path.join(
-        get_package_share_directory('sprint1'),
+        get_package_share_directory('sprint2'),
         'worlds',
         'test_world.world'
     )
     rviz_config_file = os.path.join(
-        get_package_share_directory('sprint1'),
+        get_package_share_directory('sprint2'),
         'rviz',
         'test_config.rviz'
+    )
+    slam_params_file = os.path.join(
+        get_package_share_directory('sprint2'),
+        'config',
+        'mapper_params_online_async.yaml'
     )
 
     # nodes
     example_node = Node(
-        package="sprint1",
+        package="sprint2",
         executable="example_node"
     )
 
@@ -40,6 +47,14 @@ def generate_launch_description():
         name="rviz2",
         output="log",
         arguments=["-d", rviz_config_file],
+    )
+    
+    slam_node = Node(
+        parameters=[slam_params_file, {'use_sim_time': use_sim_time}],
+        package='slam_toolbox',
+        executable='async_slam_toolbox_node',
+        name='slam_toolbox',
+        output='screen'
     )
 
     # gazebo
@@ -77,6 +92,7 @@ def generate_launch_description():
     # add actions to launch
     ld.add_action(example_node)
     ld.add_action(rviz_node)
+    ld.add_action(slam_node)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(robot_state_publisher_cmd)
