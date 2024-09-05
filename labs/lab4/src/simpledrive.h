@@ -23,13 +23,6 @@ public:
     void odoCallback(const std::shared_ptr<nav_msgs::msg::Odometry> msg);
 
     /**
-     * @brief imu callback
-     * 
-     * @param msg sensor_msgs::msg::Imu
-     */
-    void imuCallback(const std::shared_ptr<sensor_msgs::msg::Imu> msg);
-
-    /**
      * @brief Get last odometry message
      * 
      * @return nav_msgs::msg::Odometry
@@ -37,11 +30,10 @@ public:
     nav_msgs::msg::Odometry getOdo(void);
 
     /**
-     * @brief Get last imu message
+     * @brief timer function
      * 
-     * @return nsensor_msgs::msg::Imu 
      */
-    sensor_msgs::msg::Imu getImu(void);
+    void timerCallback(void);
 
     /**
      * @brief 6DOF publisher
@@ -63,31 +55,9 @@ public:
      */
     void diveCMD(const double x_lin, const double yaw);
 
-    /**
-     * @brief Sets the starting timer
-     * 
-     */
-    void timerStart(void);
-
-    /**
-     * @brief returns time passed in ms
-     * 
-     * @param startTime 
-     * @return double duration [ms]
-     */
-    int calculateDuration(std::chrono::time_point<std::chrono::system_clock> startTime);
-
-    /**
-     * @brief drive for a distance in a straight line
-     * 
-     * @param goalDistance [m]
-     * @param velocity [m/s]
-     */
-    void driveInLine(const double goalDistance, const double goalVelocity);
-
     rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr sub_odo_;  //!< odometry subscriber
-    rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr sub_imu_;  //!< odometry subscriber
-    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_vel_;     //!< velocity publisher
+    rclcpp::Publisher<geometry_msgs::msg::Twist>::SharedPtr pub_cmd_vel_;     //!< velocity publisher
+    rclcpp::TimerBase::SharedPtr timer_; //!< timer
 
     std::mutex mtx_;    //!< Mutex to allow for future multithreadding. Not Currently required.
 
