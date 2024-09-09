@@ -1,0 +1,33 @@
+{
+  "configurations": [
+    {
+      "browse": {
+        "databaseFilename": "${default}",
+        "limitSymbolsToIncludedHeaders": false
+      },
+      "includePath": [
+        "/home/joseph/ros2_ws/install/turtlesim/include/**",
+        "/home/joseph/ros2_ws/install/turtlebot3_fake_node/include/**",
+        "/home/joseph/ros2_ws/install/turtlebot3_msgs/include/**",
+        "/home/joseph/ros2_ws/install/turtlebot3_gazebo/include/**",
+        "/home/joseph/ros2_ws/install/dynamixel_sdk_custom_interfaces/include/**",
+        "/home/joseph/ros2_ws/install/dynamixel_sdk/include/**",
+        "/opt/ros/humble/include/**",
+        "/home/joseph/ros2_ws/src/DynamixelSDK/dynamixel_sdk/include/**",
+        "/home/joseph/ros2_ws/src/DynamixelSDK/dynamixel_sdk_examples/include/**",
+        "/home/joseph/ros2_ws/src/robot_localization/robot_localization-f6b28e0c5bcf98d161cb65b9d28d00ced77fe3ab/include/**",
+        "/home/joseph/ros2_ws/src/ros_tutorials/turtlesim/include/**",
+        "/home/joseph/ros2_ws/src/turtlebot3/turtlebot3_node/include/**",
+        "/home/joseph/ros2_ws/src/turtlebot3_simulations/turtlebot3_fake_node/include/**",
+        "/home/joseph/ros2_ws/src/turtlebot3_simulations/turtlebot3_gazebo/include/**",
+        "/usr/include/**"
+      ],
+      "name": "ROS",
+      "intelliSenseMode": "gcc-x64",
+      "compilerPath": "/usr/bin/gcc",
+      "cStandard": "gnu11",
+      "cppStandard": "c++14"
+    }
+  ],
+  "version": 4
+}

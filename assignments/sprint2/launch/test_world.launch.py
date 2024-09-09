@@ -13,12 +13,17 @@ def generate_launch_description():
     ld = LaunchDescription()
 
     # settings
-    robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
-    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    use_autostart = LaunchConfiguration('autostart', default='true')
+    # starting pose
     x_pose = LaunchConfiguration('x_pose', default='-2')
     y_pose = LaunchConfiguration('y_pose', default='0')
-    lifecycle_nodes = ['map_server']
+    # launch parameters
+    use_sim_time = LaunchConfiguration('use_sim_time', default='true')
+    use_lifestyle_autostart = LaunchConfiguration('autostart', default='true')
+    use_map_subscribe = LaunchConfiguration('map_subscribe_transient_local', default='true')
+    lifecycle_nodes = ['map_server', 'amcl']
+    # filepaths
+    robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
+    nav2Launch = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')
     world = os.path.join(
         get_package_share_directory('turtlebot3_gazebo'),
         'worlds',
@@ -37,23 +42,26 @@ def generate_launch_description():
     map_file = os.path.join(
         get_package_share_directory('sprint2'),
         'map',
-        'test_map_serial.yaml'
+        'test_map.yaml'
     )
 
     # nodes
     example_node = Node(
         package="sprint2",
-        executable="example_node"
+        executable="example_node",
+        name="sprint2_node",
+        output="screen"
     )
 
-    rviz_node = Node(
+    rviz = Node(
         package="rviz2",
         executable="rviz2",
         name="rviz2",
         output="log",
-        arguments=["-d", rviz_config_file],
+        arguments=["-d", rviz_config_file]
     )
     
+    # navigation / localisation
     slam_node = Node(
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
@@ -62,23 +70,40 @@ def generate_launch_description():
         parameters=[slam_params_file, {'use_sim_time': use_sim_time}]
     )
 
-    map_node = Node(
+    map_server = Node(
         package='nav2_map_server',
         executable='map_server',
         name='map_server',
         output='screen',
-        parameters=[{'yaml_filename':map_file}, {'use_sim_time': use_sim_time}]
+        parameters=[{'yaml_filename': map_file},
+                    {'use_sim_time': use_sim_time}]
+    )
+
+    amcl = Node(
+        package='nav2_amcl',
+        executable='amcl',
+        name='amcl',
+        output='screen',
+        parameters=[{'map': map_file},
+                    {'use_sim_time': use_sim_time}]
+    )
+
+    nav2 = IncludeLaunchDescription(
+        PythonLaunchDescriptionSource(
+            os.path.join(nav2Launch, 'navigation_launch.py')
+        ),
+        launch_arguments={'map_subscribe_transient_local': use_map_subscribe,'use_sim_time': use_sim_time}.items()
     )
 
     lifecycle_manager_cmd = Node(
-            package='nav2_lifecycle_manager',
-            executable='lifecycle_manager',
-            name='lifecycle_manager',
-            output='screen',
-            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
-            parameters=[{'use_sim_time': use_sim_time},
-                        {'autostart': use_autostart},
-                        {'node_names': lifecycle_nodes}])
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager',
+        output='screen',
+        emulate_tty=True,  # fixes terminal output https://github.com/ros2/launch/issues/188
+        parameters=[{'use_sim_time': use_sim_time},
+                    {'autostart': use_lifestyle_autostart},
+                    {'node_names': lifecycle_nodes}])
 
     # gazebo
     gzserver_cmd = IncludeLaunchDescription(
@@ -114,9 +139,11 @@ def generate_launch_description():
 
     # add actions to launch
     ld.add_action(example_node)
-    ld.add_action(rviz_node)
+    ld.add_action(rviz)
     ld.add_action(slam_node)
-    ld.add_action(map_node)
+    ld.add_action(map_server)
+    ld.add_action(amcl)
+    ld.add_action(nav2)
     ld.add_action(lifecycle_manager_cmd)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)

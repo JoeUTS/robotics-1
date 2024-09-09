@@ -21,12 +21,12 @@ find_package(OpenCV REQUIRED)
 set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "sensor_msgs" "image_transport" "cv_bridge" "OpenCV")
 
 set(lab5_SRCS
-  src/imageconverter.cpp
+  src/scan2image.cpp
   src/main.cpp
 )
 
 set(lab5_HDRS
-  include/imageconverter.h
+  include/scan2image.h
 )
 
 #rosidl_get_typesupport_target(cpp_typesupport_target "${PROJECT_NAME}" "rosidl_typesupport_cpp")
