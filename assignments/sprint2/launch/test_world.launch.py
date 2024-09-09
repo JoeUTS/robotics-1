@@ -15,12 +15,14 @@ def generate_launch_description():
     # settings
     robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
-    x_pose = LaunchConfiguration('x_pose', default='9.0')
-    y_pose = LaunchConfiguration('y_pose', default='-8.0')
+    use_autostart = LaunchConfiguration('autostart', default='true')
+    x_pose = LaunchConfiguration('x_pose', default='-2')
+    y_pose = LaunchConfiguration('y_pose', default='0')
+    lifecycle_nodes = ['map_server']
     world = os.path.join(
-        get_package_share_directory('sprint2'),
+        get_package_share_directory('turtlebot3_gazebo'),
         'worlds',
-        'test_world.world'
+        'turtlebot3_world.world'
     )
     rviz_config_file = os.path.join(
         get_package_share_directory('sprint2'),
@@ -31,6 +33,11 @@ def generate_launch_description():
         get_package_share_directory('sprint2'),
         'config',
         'mapper_params_online_async.yaml'
+    )
+    map_file = os.path.join(
+        get_package_share_directory('sprint2'),
+        'map',
+        'test_map_serial.yaml'
     )
 
     # nodes
@@ -48,12 +55,30 @@ def generate_launch_description():
     )
     
     slam_node = Node(
-        parameters=[slam_params_file, {'use_sim_time': use_sim_time}],
         package='slam_toolbox',
         executable='async_slam_toolbox_node',
         name='slam_toolbox',
-        output='screen'
+        output='screen',
+        parameters=[slam_params_file, {'use_sim_time': use_sim_time}]
     )
+
+    map_node = Node(
+        package='nav2_map_server',
+        executable='map_server',
+        name='map_server',
+        output='screen',
+        parameters=[{'yaml_filename':map_file}, {'use_sim_time': use_sim_time}]
+    )
+
+    lifecycle_manager_cmd = Node(
+            package='nav2_lifecycle_manager',
+            executable='lifecycle_manager',
+            name='lifecycle_manager',
+            output='screen',
+            emulate_tty=True,  # https://github.com/ros2/launch/issues/188
+            parameters=[{'use_sim_time': use_sim_time},
+                        {'autostart': use_autostart},
+                        {'node_names': lifecycle_nodes}])
 
     # gazebo
     gzserver_cmd = IncludeLaunchDescription(
@@ -83,7 +108,7 @@ def generate_launch_description():
         ),
         launch_arguments={
             'x_pose': x_pose,
-            'y_pose': y_pose
+            'y_pose': y_pose,
         }.items()
     )
 
@@ -91,6 +116,8 @@ def generate_launch_description():
     ld.add_action(example_node)
     ld.add_action(rviz_node)
     ld.add_action(slam_node)
+    ld.add_action(map_node)
+    ld.add_action(lifecycle_manager_cmd)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(robot_state_publisher_cmd)

@@ -3,6 +3,9 @@
 simpledrive::simpledrive() : Node("simpledrive"), GOAL_DISTANCE(1), NOISE_MAX(0.1) {
     totalDistance_ = 0;
     vel_.linear.x = 1;  // 1m/s
+    
+    // initialising flags
+    prevOdoSet_ = 0;
 
     sub_odo_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "/odom", 10, std::bind(&simpledrive::odoCallback,this,std::placeholders::_1));
@@ -16,25 +19,27 @@ simpledrive::simpledrive() : Node("simpledrive"), GOAL_DISTANCE(1), NOISE_MAX(0.
     timer_ = this->create_wall_timer(
             std::chrono::milliseconds(100),
             std::bind(&simpledrive::timerCallback, this));
-
-    pub_cmd_vel_->publish(vel_);
 }
 
 void simpledrive::odoCallback(const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
     std::unique_lock<std::mutex> lck(mtx_);
-    RCLCPP_INFO_STREAM(this->get_logger(), "Odo updated");
     odo_ = *msg;
 }
 
 void simpledrive::timerCallback(void) {
     std::unique_lock<std::mutex> lck(mtx_);
-    // assume not enough odo data yet
-    if (prevOdo_.header.stamp.nanosec == 0 && prevOdo_.header.stamp.sec == 0) {
+    // populate previous odometry values first
+    if (!prevOdoSet_) {
+        prevOdo_ = odo_;
+        lastTime_ = this->now();
+        pub_cmd_vel_->publish(vel_);    // start driving
+        prevOdoSet_ = 1;
         return;
     }
 
     if (totalDistance_ >= GOAL_DISTANCE) {
-        pub_cmd_vel_->publish(geometry_msgs::msg::Twist());
+        pub_cmd_vel_->publish(geometry_msgs::msg::Twist()); // stop driving
+            RCLCPP_INFO_STREAM(this->get_logger(), "We have arrived at our destination");
         return;
     }
 
@@ -48,8 +53,6 @@ void simpledrive::timerCallback(void) {
     // current odometry
     double localX = localOdo.pose.pose.position.x;
     double localY = localOdo.pose.pose.position.y;
-    
-    // populate orientation
     double localRoll;
     double localPitch;
     double localYaw;
@@ -69,6 +72,8 @@ void simpledrive::timerCallback(void) {
     double distanceTraveled = velLin * duration;
     double deltaYaw = velYaw * duration;
 
+
+
     // break into individual components
     double deltaX = distanceTraveled * cos(deltaYaw);
     double deltaY = distanceTraveled * sin(deltaYaw);
@@ -85,7 +90,7 @@ void simpledrive::timerCallback(void) {
         localYaw += 2 * M_PI;
     }
 
-    // Generate message
+    // Generate noisey message
     localOdo.header.stamp = this->now();
     localOdo.pose.pose.position.x = localX;
     localOdo.pose.pose.position.y = localY;

@@ -48,7 +48,9 @@ public:
     nav_msgs::msg::Odometry odo_;       //!< odometry value
     nav_msgs::msg::Odometry prevOdo_;   //!< previous odometry value
     geometry_msgs::msg::Twist vel_;     //!< velocity values
+
     rclcpp::Time lastTime_; //!< previous timestamp for velocity calulation
+    bool prevOdoSet_;       //!< flag to check if previous odometry is set
     double totalDistance_;  //!< total distance travelled
     
 };
