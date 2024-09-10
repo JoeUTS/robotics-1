@@ -19,7 +19,7 @@ def generate_launch_description():
     # launch parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     use_lifestyle_autostart = LaunchConfiguration('autostart', default='true')
-    use_map_subscribe = LaunchConfiguration('map_subscribe_transient_local', default='true')
+    use_map_subscribe = LaunchConfiguration('map_subscribe_transient_local', default='false')
     lifecycle_nodes = ['map_server', 'amcl']
     # filepaths
     robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
@@ -78,6 +78,7 @@ def generate_launch_description():
         parameters=[{'yaml_filename': map_file},
                     {'use_sim_time': use_sim_time}]
     )
+
 
     amcl = Node(
         package='nav2_amcl',

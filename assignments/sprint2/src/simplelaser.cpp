@@ -34,7 +34,7 @@ sensor_msgs::msg::LaserScan SimpleLaser::getNthPoint(const int N) {
     // find new set of ranages
     std::vector<float> newRanges;
 
-    for (int i = 0; i < newScan.ranges.size(); i += N) {
+    for (long unsigned int i = 0; i < newScan.ranges.size(); i += N) {
         newRanges.push_back(newScan.ranges.at(i));
     }
 
