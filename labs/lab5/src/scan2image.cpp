@@ -21,7 +21,7 @@ void scan2image::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg) 
         first_image_ = img.clone();
         first_image_captured_ = true;
         // Display the first image
-        cv::imshow("First Image", first_image_);
+        cv::imshow("ImageS", first_image_);
         cv::waitKey(1);  // Add this to process GUI events and update the window
         // Rotate the robot by publishing to cmd_vel
         // rotateRobot();
@@ -29,19 +29,19 @@ void scan2image::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg) 
         second_image_ = img.clone();
         second_image_captured_ = true;
         // Display the second image
-        cv::imshow("Second Image", second_image_);
+        cv::imshow("Image B", second_image_);
         cv::waitKey(1);  // Add this to process GUI events and update the window
         // Calculate the change in yaw using cv::transform
     } else {
         first_image_ = second_image_.clone();
         second_image_ = img.clone();
         // Display the new second image
-        cv::imshow("Second Image", second_image_);
+        cv::imshow("Image B", second_image_);
         cv::waitKey(1);  // Add this to process GUI events and update the window
 
         calculateYawChange();
         relative_orientaion_ = relative_orientaion_ + angle_difference_;
-        RCLCPP_INFO(this->get_logger(), "Relative Orientation: %f", relative_orientaion_);
+        RCLCPP_INFO(this->get_logger(), "Orientation: %f", relative_orientaion_);
     }
 }
 
@@ -85,7 +85,7 @@ void scan2image::calculateYawChange(void) {
             // Extract the rotation angle from the transformation matrix
             angle_difference_ = atan2(transform_matrix.at<double>(1, 0), transform_matrix.at<double>(0, 0));
             angle_difference_ = angle_difference_ * 180.0 / CV_PI;
-            RCLCPP_INFO(this->get_logger(), "Estimated yaw angle change: %f degrees", angle_difference_);
+            RCLCPP_INFO(this->get_logger(), "yaw angle change: %f degrees", angle_difference_);
         }
     } catch (const cv::Exception& e) {
         RCLCPP_ERROR(this->get_logger(), "Error in estimateAffinePartial2D: %s", e.what());
