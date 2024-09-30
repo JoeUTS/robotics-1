@@ -14,8 +14,8 @@ def generate_launch_description():
 
     # settings
     # starting pose
-    x_pose = LaunchConfiguration('x_pose', default='-2')
-    y_pose = LaunchConfiguration('y_pose', default='0')
+    x_pose = LaunchConfiguration('x_pose', default='5')
+    y_pose = LaunchConfiguration('y_pose', default='-7')
     # launch parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     use_lifestyle_autostart = LaunchConfiguration('autostart', default='true')
@@ -25,9 +25,9 @@ def generate_launch_description():
     robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
     nav2Launch = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')
     world = os.path.join(
-        get_package_share_directory('turtlebot3_gazebo'),
+        get_package_share_directory('pathfinder'),
         'worlds',
-        'turtlebot3_world.world'
+        'sprint_3_world.world'
     )
     rviz_config_file = os.path.join(
         get_package_share_directory('pathfinder'),
@@ -48,7 +48,7 @@ def generate_launch_description():
     # nodes
     example_node = Node(
         package="pathfinder",
-        executable="placeholder",
+        executable="pathfinder",
         name="pathfinder_node",
         output="screen"
     )
@@ -141,10 +141,10 @@ def generate_launch_description():
     ld.add_action(example_node)
     ld.add_action(rviz)
     ld.add_action(slam_node)
-    ld.add_action(map_server)
-    ld.add_action(amcl)
+    #ld.add_action(map_server)
+    #ld.add_action(amcl)
     ld.add_action(nav2)
-    ld.add_action(lifecycle_manager_cmd)
+    #ld.add_action(lifecycle_manager_cmd)
     ld.add_action(gzserver_cmd)
     ld.add_action(gzclient_cmd)
     ld.add_action(robot_state_publisher_cmd)

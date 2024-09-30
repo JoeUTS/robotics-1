@@ -19,31 +19,20 @@ set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs
 
 set(pathfinder_SRCS
   src/pathfinder.cpp
-)
-
-set(pathfinder_HDRS
-  include/pathfinder.h
-)
-
-add_library(pathfinder ${pathfinder_SRCS} ${pathfinder_MOCS})
-ament_target_dependencies(pathfinder ${dependencies})
-
-set(placeholder_SRCS
   src/placeholder.cpp
   src/main.cpp
 )
 
-set(placeholder_HDRS
+set(pathfinder_HDRS
+  include/pathfinder.h
   include/placeholder.h
 )
 
-add_executable(placeholder ${placeholder_SRCS} ${placeholder_MOCS})
-ament_target_dependencies(placeholder ${dependencies})
-target_link_libraries(placeholder pathfinder)
+add_executable(pathfinder ${pathfinder_SRCS} ${pathfinder_MOCS})
+ament_target_dependencies(pathfinder ${dependencies})
 
 install(TARGETS
   pathfinder
-  placeholder
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY 
@@ -51,6 +40,7 @@ install(DIRECTORY
   map
   rviz
   config
+  worlds
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)

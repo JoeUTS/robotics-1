@@ -1,7 +1,7 @@
 #include "pathfinder.h"
 
 
-pathfinder::pathfinder(const nav_msgs::msg::OccupancyGrid &map) : Node("pathfinder"), CELL_OCCUPIED_THRESHOLD(50), CELL_VALUE_MIN(-1), CELL_VALUE_MAX(100), map_(map) {
+pathfinder::pathfinder(const nav_msgs::msg::OccupancyGrid &map) : Node("pathfinder"), CELL_OCCUPIED_THRESHOLD(75), CELL_VALUE_MIN(-1), CELL_VALUE_MAX(100), map_(map) {
     marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>("/path_visualization", 10);
 }
 
@@ -119,7 +119,9 @@ int pathfinder::cart2cell(const geometry_msgs::msg::Pose pose, const nav_msgs::m
     }
 
     // convert from (x,y) to row-major index
-    return (mapY * map.info.width) + mapX;
+    int index = (mapY * map.info.width) + mapX;
+
+    return index;
 }
 
 geometry_msgs::msg::Pose pathfinder::cell2cart(const int index, const nav_msgs::msg::OccupancyGrid &map) {
