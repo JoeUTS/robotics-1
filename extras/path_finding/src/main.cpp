@@ -1,11 +1,11 @@
 #include <rclcpp/rclcpp.hpp>
 
-#include "pathfinder.h"
+#include "placeholder.h"
 
 int main(int argc, char **argv)
 {
     rclcpp::init(argc, argv);
-    rclcpp::spin(std::make_shared<pathfinder>());
+    rclcpp::spin(std::make_shared<placeholder>());
     rclcpp::shutdown();
     return 0;
 }

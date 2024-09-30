@@ -3,12 +3,18 @@
 
 #include <mutex>
 #include <climits>  // for INT_MAX
+#include <cmath>
 #include <queue>
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
+#include <geometry_msgs/msg/vector3.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
+#include <tf2/LinearMath/Quaternion.h>
+#include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <visualization_msgs/msg/marker.hpp>
+#include <visualization_msgs/msg/marker_array.hpp>
 
 struct cellData {
         unsigned int index;         // index of cell
@@ -46,16 +52,25 @@ public:
      * @param goalPose geometry_msgs::msg::Pose
      * @return geometry_msgs::msg::PoseArray path waypoints
      */
-    geometry_msgs::msg::PoseArray AStar(const geometry_msgs::msg::Pose startPose, const geometry_msgs::msg::Pose goalPose, const nav_msgs::msg::OccupancyGrid &map);
+    geometry_msgs::msg::PoseArray AStar(const geometry_msgs::msg::Pose startPose, const geometry_msgs::msg::Pose goalPose);
 
 private:
     std::mutex mtx_;
 
+    rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_; //!< Marker publisher
+
     const int CELL_OCCUPIED_THRESHOLD;  //!< Cell occupied threshold value
-    const int CELL_VALUE_MIN;                 //!< Cell min value
-    const int CELL_VALUE_MAX;                 //!< Cell max value
+    const int CELL_VALUE_MIN;           //!< Cell min value
+    const int CELL_VALUE_MAX;           //!< Cell max value
 
     nav_msgs::msg::OccupancyGrid map_;    //!< Map data
+
+    /**
+     * @brief publish's path markers
+     * 
+     * @param path 
+     */
+    void publishMarkers(const geometry_msgs::msg::PoseArray path);
 
     /**
      * @brief Compares pose to map for validity check

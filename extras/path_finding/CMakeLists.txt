@@ -11,8 +11,11 @@ find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_geometry_msgs REQUIRED)
+find_package(visualization_msgs REQUIRED)
 
-set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs")
+set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs" "tf2" "tf2_geometry_msgs" "visualization_msgs")
 
 set(pathfinder_SRCS
   src/pathfinder.cpp
@@ -45,6 +48,9 @@ install(TARGETS
 
 install(DIRECTORY 
   launch
+  map
+  rviz
+  config
   DESTINATION share/${PROJECT_NAME})
 
 if(BUILD_TESTING)
