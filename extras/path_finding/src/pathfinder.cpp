@@ -105,10 +105,10 @@ bool pathfinder::validatePose(const geometry_msgs::msg::Pose pose, const nav_msg
 
 int pathfinder::cart2cell(const geometry_msgs::msg::Pose pose, const nav_msgs::msg::OccupancyGrid &map) {
     // convert from global frame to map frame
-    int mapX = pose.position.x - map.info.origin.position.x;
-    int mapY = pose.position.y - map.info.origin.position.y;
+    double mapX = pose.position.x - map.info.origin.position.x;
+    double mapY = pose.position.y - map.info.origin.position.y;
 
-    // change to pixle units
+    // change to cell units
     mapX /= map.info.resolution;
     mapY /= map.info.resolution;
 
@@ -118,18 +118,22 @@ int pathfinder::cart2cell(const geometry_msgs::msg::Pose pose, const nav_msgs::m
         return -1;
     }
 
-    // convert from (x,y) to row-major index with (0,0) at bottom left of map
+    // convert from (x,y) to row-major index
     return (mapY * map.info.width) + mapX;
 }
 
 geometry_msgs::msg::Pose pathfinder::cell2cart(const int index, const nav_msgs::msg::OccupancyGrid &map) {
-    // convert to (x,y) in map frame from row-major index with (0,0) at bottom left of map
+    // convert to (x,y) in map frame from row-major index
     int column = index % map.info.width;
-    int row = (map.info.height - 1) - (index / map.info.width);
+    int row = index / map.info.width;
 
-    // comvert to global scale
+    // comvert to SI units
     double mapX = column * map.info.resolution;
     double mapY = row * map.info.resolution;
+
+    // convert to global frame
+    mapX += map.info.origin.position.x;
+    mapY += map.info.origin.position.y;
 
     // move point to center of cell
     mapX += (map.info.resolution / 2);
@@ -234,8 +238,8 @@ double pathfinder::findGridDistance(const unsigned int startCell, const unsigned
     int goalColumn = goalCell % map.info.width;
     int xDist = std::abs(startColumn - goalColumn);
 
-    int startRow = (map.info.height - 1) - (startCell / map.info.width);
-    int goalRow = (map.info.height - 1) - (goalCell / map.info.width);
+    int startRow = startCell / map.info.width;
+    int goalRow = goalCell / map.info.width;
     int yDist = std::abs(startRow - goalRow);
 
     // Diagonal cost
@@ -291,6 +295,7 @@ double pathfinder::findDistanceHome(const unsigned int startingCell, const std::
 }
 
 geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose startPose, const geometry_msgs::msg::Pose goalPose) {
+    RCLCPP_INFO_STREAM(this->get_logger(), "A* called");
     nav_msgs::msg::OccupancyGrid map = getMap();
     geometry_msgs::msg::PoseArray path;
 
@@ -306,6 +311,10 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
     // get start and end cells
     unsigned int startCell = cart2cell(startPose, map);
     unsigned int goalCell = cart2cell(goalPose, map);
+
+    RCLCPP_INFO_STREAM(this->get_logger(), "conversion test (" << cell2cart(startCell, map).position.x / startPose.position.x * 100<< ", " << cell2cart(startCell, map).position.y / startPose.position.y * 100<< ")");
+    RCLCPP_INFO_STREAM(this->get_logger(), "conversion test (" << cell2cart(goalCell, map).position.x / goalPose.position.x * 100 << ", " << cell2cart(goalCell, map).position.y / goalPose.position.y * 100 << ")");
+
 
     // check if start and goal cells are the same
     if (startCell == goalCell) {
@@ -335,7 +344,7 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
     cellDataVector.at(startCell).parentCell = startCell;
     cellDataVector.at(startCell).gCost = 0;
     cellDataVector.at(startCell).hCost = 0;
-    cellDataVector.at(startCell).fCost = cellDataVector.at(startCell).gCost + cellDataVector.at(startCell).hCost;
+    cellDataVector.at(startCell).fCost = 0;
 
     // comparison for priority queue
     struct Compare {
@@ -357,6 +366,7 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
         cellData currentCell = openList.top();
         openList.pop();
         closedList.push_back(currentCell.index);
+        bool updatedList = false;
 
         // find index's around current cell
         std::array<int, 8> adjacentCells = findAdjacentCells(currentCell.index, map);
@@ -398,36 +408,9 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
                 cellDataVector.at(adjacentCells[i]).gCost = newGCost;
                 cellDataVector.at(adjacentCells[i]).fCost = newFCost;
 
-                // if already on open list, update it
+                // flag for list update
                 if (cellDataVector.at(adjacentCells[i]).visited) {
-                    // force priority queue to update
-                    std::vector<cellData> tempList;
-                    cellData tempCell = openList.top();
-                    openList.pop();
-
-                    // find edited cell
-                    while (tempCell.index != cellDataVector.at(adjacentCells[i]).index) {
-                        tempList.push_back(tempCell);
-                        tempCell = openList.top();
-
-                        if (openList.empty()) {
-                            RCLCPP_ERROR_STREAM(this->get_logger(), "Could not find cell in open list");
-                            break;
-                        }
-                        openList.pop();
-                    }
-
-                    // remove edited cell
-                    tempList.push_back(tempCell);
-                    tempCell = openList.top();
-                    if (!openList.empty()) {
-                        openList.pop();
-                    }
-
-                    // return cells back to list
-                    for (unsigned int j = 0; j < tempList.size(); j++) {
-                        openList.push(tempList.at(j));
-                    }
+                    updatedList = true;
                 }
             }
 
@@ -438,12 +421,26 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
             }
         }
 
+        // Recalculate list if data updated
+        if (updatedList) {
+            std::priority_queue<cellData, std::vector<cellData>, Compare> tempList;
+
+            while (!openList.empty()) {
+                tempList.push(openList.top());
+                openList.pop();
+            }
+
+            // return cells back to list
+            openList = tempList;
+        }
+    
         // if goal found, clear open list to end loop
         if (goalFound) {
             // Clear the queue
             std::priority_queue<cellData, std::vector<cellData>, Compare>().swap(openList);
         }
     }
+
 
     // check if goal found
     if (!goalFound) {
@@ -452,19 +449,10 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
     }
 
     // generate path (this is generating backwards)
-    path.poses.push_back(goalPose);
-
     cellData currentCell = cellDataVector.at(goalCell);
-    geometry_msgs::msg::Pose pose = goalPose;
+    geometry_msgs::msg::Pose pose = cell2cart(goalCell, map);
 
     while (currentCell.parentCell != startCell) {
-        // skip first cell to prevent overshooting goal if in first part of cell
-        if (currentCell.index == goalCell) {
-            currentCell = cellDataVector.at(currentCell.parentCell);
-            pose = cell2cart(currentCell.parentCell, map);
-            continue;
-        }
-
         // yaw is angle from parent
         geometry_msgs::msg::Pose parentPose = cell2cart(currentCell.parentCell, map);
         double yaw = atan2(pose.position.y - parentPose.position.y, pose.position.x - parentPose.position.x);

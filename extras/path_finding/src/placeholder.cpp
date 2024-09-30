@@ -26,7 +26,6 @@ void placeholder::odoCallback(const std::shared_ptr<nav_msgs::msg::Odometry> msg
 }
 
 void placeholder::timerCallback(void) {
-
     geometry_msgs::msg::Pose goalPose;
 
     goalPose.position.x = odo_.pose.pose.position.x;
