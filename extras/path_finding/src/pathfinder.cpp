@@ -75,34 +75,6 @@ nav_msgs::msg::OccupancyGrid pathfinder::getMap(void) {
     return map_;
 }
 
-bool pathfinder::validatePose(const geometry_msgs::msg::Pose pose, const nav_msgs::msg::OccupancyGrid &map) {
-    // Only validating position currently
-    int index = cart2cell(pose, map);
-
-    // index check
-    if (index < 0) {
-        RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid index @ pose[" << pose.position.x << ", " << pose.position.y << "]. Index[" << index << "]");
-        return false;
-    }
-
-    int occupancy = static_cast<int>(map.data[index]);
-
-    if (occupancy < CELL_VALUE_MIN || occupancy >= CELL_VALUE_MAX) {
-        // invalid value
-        // throw error
-        RCLCPP_ERROR_STREAM(this->get_logger(), "Invalid occupancy value @ index[" << index << "]: " << occupancy << ". expected: [" << CELL_VALUE_MIN << ", " << CELL_VALUE_MAX << "]");
-        return false;
-    }
-
-    // check cell is not obstructed
-    if (occupancy >= CELL_OCCUPIED_THRESHOLD) {
-        RCLCPP_INFO_STREAM(this->get_logger(), "Cell is obstructed @ index[" << index << "]: " << occupancy);
-        return false;
-    }
-
-    return true;
-}
-
 int pathfinder::cart2cell(const geometry_msgs::msg::Pose pose, const nav_msgs::msg::OccupancyGrid &map) {
     // convert from global frame to map frame
     double mapX = pose.position.x - map.info.origin.position.x;
@@ -159,8 +131,6 @@ std::array<int, 8> pathfinder::findAdjacentCells(const int index, const nav_msgs
     }
 
     // bound flags
-    bool isTop = false;
-    bool isBottom = false;
     bool isLeft = false;
     bool isRight = false;
 
@@ -174,28 +144,18 @@ std::array<int, 8> pathfinder::findAdjacentCells(const int index, const nav_msgs
         isRight = true;
     }
 
-    if (index - map.info.width < 0) {
-        // you are on the bottom of the grid
-        isBottom = true;
-    }
-
-    if (index + map.info.width > map.data.size()) {
-        // you are on the top of the grid
-        isTop = true;
-    }
-
     // Y+
-    if (!isTop) {
-        adjacentCells[0] = index + map.info.width;
+    if (!(index < map.info.width)) {
+        adjacentCells[0] = index - map.info.width;
 
         // X+
         if (!isRight) {
-            adjacentCells[1] = index + map.info.width + 1;
+            adjacentCells[1] = index - map.info.width + 1;
         }
         
         // X-
         if (!isLeft) {
-            adjacentCells[7] = index + map.info.width - 1;
+            adjacentCells[7] = index - map.info.width - 1;
         }
     }
 
@@ -211,15 +171,15 @@ std::array<int, 8> pathfinder::findAdjacentCells(const int index, const nav_msgs
     }
 
     // Y-
-    if (!isBottom) {
-        adjacentCells[4] = index - map.info.width;
+    if (!(index >= map.info.height * map.info.width - map.info.width)) {
+        adjacentCells[4] = index + map.info.width;
 
         if (!isRight) {
-            adjacentCells[3] = index - map.info.width + 1;
+            adjacentCells[3] = index + map.info.width + 1;
         }
 
         if (!isLeft) {
-            adjacentCells[5] = index - map.info.width - 1;
+            adjacentCells[5] = index + map.info.width - 1;
         }
     }
 
@@ -234,8 +194,8 @@ std::array<int, 8> pathfinder::findAdjacentCells(const int index, const nav_msgs
     return adjacentCells;
 }
 
-double pathfinder::findGridDistance(const unsigned int startCell, const unsigned int goalCell, const nav_msgs::msg::OccupancyGrid &map) {
-    // find manhattan distances
+double pathfinder::findEuklidDistance(const unsigned int startCell, const unsigned int goalCell, const nav_msgs::msg::OccupancyGrid &map) {
+    // X and Y distances
     int startColumn = startCell % map.info.width;
     int goalColumn = goalCell % map.info.width;
     int xDist = std::abs(startColumn - goalColumn);
@@ -244,79 +204,44 @@ double pathfinder::findGridDistance(const unsigned int startCell, const unsigned
     int goalRow = goalCell / map.info.width;
     int yDist = std::abs(startRow - goalRow);
 
-    // Diagonal cost
+    // find diagonals
     unsigned int diagonalMoves = std::min(xDist, yDist);
     double cost = diagonalMoves * sqrt(2);
 
-    // linear cost
+    // find linear moves
     cost += std::max(xDist, yDist) - diagonalMoves;
 
     return cost;
 }
 
-double pathfinder::findDistanceHome(const unsigned int startingCell, const std::vector<cellData> &cellDataList, const nav_msgs::msg::OccupancyGrid &map) {
-    unsigned int currentCell = startingCell;
-
-    if (cellDataList.size() == 0) {
-        RCLCPP_INFO_STREAM(this->get_logger(), "Empty cell data");
-        return -1;
-    }
-
-    if (cellDataList.at(currentCell).parentCell == startingCell) {
-        return 0;
-    }
-
-
-    double distance = 0;
-    unsigned int parentCell = cellDataList.at(currentCell).parentCell;
-
-    while (parentCell != currentCell) {
-        // check if current cell valid
-        if (currentCell >= map.data.size()) {
-            RCLCPP_INFO_STREAM(this->get_logger(), "Current cell is out of range. Result: " << currentCell << ". Expected: [0, " << map.data.size() << "]");
-            return -1;
-        }
-
-        // find direction of cell
-        int indexDelta = parentCell - currentCell;
-
-        if (abs(indexDelta) == 1 || abs(indexDelta) == map.info.width) {
-            // linear movement
-            distance += 1;
-        } else if (abs(indexDelta) == map.info.width + 1 || abs(indexDelta) == map.info.width - 1) {
-            // diagonal
-            distance += sqrt(2);
-        }
-
-        // update cell
-        currentCell = parentCell;
-        parentCell = cellDataList.at(currentCell).parentCell;
-    }
-
-    return distance;
-}
-
 geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose startPose, const geometry_msgs::msg::Pose goalPose) {
-    RCLCPP_INFO_STREAM(this->get_logger(), "A* called");
     nav_msgs::msg::OccupancyGrid map = getMap();
     geometry_msgs::msg::PoseArray path;
-
-    // check if start and goal poses are valid
-    if (!validatePose(startPose, map)) {
-        return path;
-    }
-    
-    if (!validatePose(goalPose, map)) {
-        return path;
-    }
 
     // get start and end cells
     unsigned int startCell = cart2cell(startPose, map);
     unsigned int goalCell = cart2cell(goalPose, map);
 
-    RCLCPP_INFO_STREAM(this->get_logger(), "conversion test (" << cell2cart(startCell, map).position.x / startPose.position.x * 100<< ", " << cell2cart(startCell, map).position.y / startPose.position.y * 100<< ")");
-    RCLCPP_INFO_STREAM(this->get_logger(), "conversion test (" << cell2cart(goalCell, map).position.x / goalPose.position.x * 100 << ", " << cell2cart(goalCell, map).position.y / goalPose.position.y * 100 << ")");
+    // check if start and goal poses are valid
+    if (startCell == -1) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "Start cell is invalid");
+        return path;
+    }
 
+    if (startCell == -1) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "End cell is invalid");
+        return path;
+    }
+
+    if (static_cast<int>(map.data[startCell]) > CELL_OCCUPIED_THRESHOLD) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "Start cell is occupied");
+        return path;
+    }
+
+    if (static_cast<int>(map.data[goalCell]) > CELL_OCCUPIED_THRESHOLD) {
+        RCLCPP_INFO_STREAM(this->get_logger(), "goal cell is occupied");
+        return path;
+    }
 
     // check if start and goal cells are the same
     if (startCell == goalCell) {
@@ -327,7 +252,6 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
 
     // generate new cell data
     std::vector<cellData> cellDataVector;
-
     for (unsigned int i = 0; i < map.data.size(); i++) {
         cellData tempCell;
         tempCell.index = i;
@@ -355,14 +279,13 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
         }
     };
 
-    // open list
+    // lists
     std::priority_queue<cellData, std::vector<cellData>, Compare> openList;
     openList.push(cellDataVector.at(startCell));
-
-    // closed list - where we have been
     std::vector<int> closedList;
 
     bool goalFound = false;
+
     while (!openList.empty()) {
         // new cycle
         cellData currentCell = openList.top();
@@ -370,9 +293,8 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
         closedList.push_back(currentCell.index);
         bool updatedList = false;
 
-        // find index's around current cell
+        // look at surrounding cells
         std::array<int, 8> adjacentCells = findAdjacentCells(currentCell.index, map);
-
         for (int i = 0; i < 8; i++) {
             // validity check
             if (adjacentCells[i] == -1) {
@@ -395,11 +317,11 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
                 continue;
             }
 
-            // set h cost
-            cellDataVector.at(adjacentCells[i]).hCost = findGridDistance(adjacentCells[i], goalCell, map);
-
-            // calculate g and f costs from current cell
-            double newGCost = findGridDistance(currentCell.index, adjacentCells[i], map);
+            // set costs
+            if (cellDataVector.at(adjacentCells[i]).hCost == INFINITY) {
+                cellDataVector.at(adjacentCells[i]).hCost = findEuklidDistance(adjacentCells[i], goalCell, map);
+            }
+            double newGCost = findEuklidDistance(currentCell.index, adjacentCells[i], map);
             newGCost += currentCell.gCost;
             double newFCost = cellDataVector.at(adjacentCells[i]).hCost + newGCost;
             
@@ -432,7 +354,6 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
                 openList.pop();
             }
 
-            // return cells back to list
             openList = tempList;
         }
     
@@ -442,7 +363,6 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
             std::priority_queue<cellData, std::vector<cellData>, Compare>().swap(openList);
         }
     }
-
 
     // check if goal found
     if (!goalFound) {
@@ -467,9 +387,9 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose s
         pose = parentPose;
         currentCell = cellDataVector.at(currentCell.parentCell);
     }
-    
-    // simplify path
-    // remove redundant points i.e. only needs the start and end point of a line, not the middle ones
+
+    // reverse path
+    std::reverse(path.poses.begin(), path.poses.end());
 
     publishMarkers(path);
 

@@ -12,27 +12,39 @@ find_package(std_msgs REQUIRED)
 find_package(geometry_msgs REQUIRED)
 find_package(nav_msgs REQUIRED)
 find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(tf2_geometry_msgs REQUIRED)
 find_package(visualization_msgs REQUIRED)
 
-set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs" "tf2" "tf2_geometry_msgs" "visualization_msgs")
+set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "geometry_msgs" "nav_msgs" "tf2" "tf2_ros" "tf2_geometry_msgs" "visualization_msgs")
 
 set(pathfinder_SRCS
   src/pathfinder.cpp
-  src/placeholder.cpp
-  src/main.cpp
 )
 
 set(pathfinder_HDRS
   include/pathfinder.h
+)
+
+add_library(pathfinder ${pathfinder_SRCS} ${pathfinder_MOCS})
+ament_target_dependencies(pathfinder ${dependencies})
+
+set(placeholder_SRCS
+  src/placeholder.cpp
+  src/main.cpp
+)
+
+set(placeholder_HDRS
   include/placeholder.h
 )
 
-add_executable(pathfinder ${pathfinder_SRCS} ${pathfinder_MOCS})
-ament_target_dependencies(pathfinder ${dependencies})
+add_executable(placeholder ${placeholder_SRCS} ${placeholder_MOCS})
+ament_target_dependencies(placeholder ${dependencies})
+target_link_libraries(placeholder pathfinder)
 
 install(TARGETS
   pathfinder
+  placeholder
   DESTINATION lib/${PROJECT_NAME})
 
 install(DIRECTORY 

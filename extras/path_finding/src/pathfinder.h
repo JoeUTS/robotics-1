@@ -8,11 +8,14 @@
 
 #include <rclcpp/rclcpp.hpp>
 #include <geometry_msgs/msg/pose.hpp>
+#include <geometry_msgs/msg/pose_stamped.hpp>
 #include <geometry_msgs/msg/pose_array.hpp>
 #include <geometry_msgs/msg/vector3.hpp>
 #include <nav_msgs/msg/occupancy_grid.hpp>
 #include <tf2/LinearMath/Quaternion.h>
 #include <tf2_geometry_msgs/tf2_geometry_msgs.hpp>
+#include <tf2_ros/buffer.h>
+#include <tf2_ros/transform_listener.h>
 #include <visualization_msgs/msg/marker.hpp>
 #include <visualization_msgs/msg/marker_array.hpp>
 
@@ -59,6 +62,9 @@ private:
 
     rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_; //!< Marker publisher
 
+    std::shared_ptr<tf2_ros::Buffer> tf_buffer_;                //!< TF buffer
+    std::shared_ptr<tf2_ros::TransformListener> tf_listener_;   //!< Transform listener
+
     const int CELL_OCCUPIED_THRESHOLD;  //!< Cell occupied threshold value
     const int CELL_VALUE_MIN;           //!< Cell min value
     const int CELL_VALUE_MAX;           //!< Cell max value
@@ -71,15 +77,6 @@ private:
      * @param path 
      */
     void publishMarkers(const geometry_msgs::msg::PoseArray path);
-
-    /**
-     * @brief Compares pose to map for validity check
-     * 
-     * @param pose 
-     * @return true pose valid
-     * @return false pose invalid
-     */
-    bool validatePose(const geometry_msgs::msg::Pose pose, const nav_msgs::msg::OccupancyGrid &map);
 
     /**
      * @brief convert point to map coords
@@ -118,18 +115,7 @@ private:
      * @param map 
      * @return double distance between cells as number of cells.
      */
-    double findGridDistance(const unsigned int startCell, const unsigned int goalCell, const nav_msgs::msg::OccupancyGrid &map);
-
-    /**
-     * @brief Finds distance back to starting cell by tracing back parent cells. \n
-     *        -1 represents unable to return home.
-     * 
-     * @param startingCell Which cell needs a path home.
-     * @param cellDataList 
-     * @return double distance as number of cells
-     */
-    double findDistanceHome(const unsigned int startingCell, const std::vector<cellData> &cellDataList, const nav_msgs::msg::OccupancyGrid &map);
-
+    double findEuklidDistance(const unsigned int startCell, const unsigned int goalCell, const nav_msgs::msg::OccupancyGrid &map);
 };
 
 #endif // PATHFINDER_H
