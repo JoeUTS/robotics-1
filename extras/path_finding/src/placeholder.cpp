@@ -57,10 +57,11 @@ void placeholder::timerCallback(void) {
         // get start and goal pose
         geometry_msgs::msg::Pose startPose = startPose_;
         geometry_msgs::msg::Pose goalPose = goalPose_;
-
+        
         // run
         RCLCPP_INFO_STREAM(this->get_logger(), "finding path from (" << startPose.position.x << ", " << startPose.position.y << ") to (" << goalPose.position.x << ", " << goalPose.position.y << ")");
-        pathfinderPointer_->AStar(startPose, goalPose);
+        geometry_msgs::msg::PoseArray path = pathfinderPointer_->AStar(startPose, goalPose);
+        pathfinderPointer_->publishMarkers(path);
     } else {
         RCLCPP_INFO_STREAM(this->get_logger(), "Initilizing pathfinder. Map[" << (pathfinderPointer_ != nullptr) << "] Start[" << startSet_ << "] Goal[" << goalSet_ << "]" );
     }

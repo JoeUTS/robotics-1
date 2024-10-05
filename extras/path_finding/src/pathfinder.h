@@ -26,6 +26,13 @@ public:
     pathfinder(const nav_msgs::msg::OccupancyGrid &map);
 
     /**
+     * @brief publish's path markers
+     * 
+     * @param path 
+     */
+    void publishMarkers(const geometry_msgs::msg::PoseArray &path);
+
+    /**
      * @brief Get the Map
      * 
      * @return nav_msgs::msg::OccupancyGrid map_
@@ -93,13 +100,6 @@ private:
             return a.fCost > b.fCost;
         }
     };
-
-    /**
-     * @brief publish's path markers
-     * 
-     * @param path 
-     */
-    void publishMarkers(const geometry_msgs::msg::PoseArray &path);
 
     /**
      * @brief convert point to map coords

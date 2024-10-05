@@ -7,7 +7,11 @@ pathfinder::pathfinder(const nav_msgs::msg::OccupancyGrid &map) : Node("pathfind
 }
 
 void pathfinder::publishMarkers(const geometry_msgs::msg::PoseArray &path)
-{
+{   
+    if (path.poses.size() == 0) {
+        return;
+    }
+    
     visualization_msgs::msg::MarkerArray markerArray;
 
     for (unsigned int i = 0; i < path.poses.size(); i++)
@@ -88,79 +92,75 @@ nav_msgs::msg::OccupancyGrid pathfinder::getMap(void)
 }
 
 int pathfinder::cart2cell(const geometry_msgs::msg::Pose &pose, const nav_msgs::msg::OccupancyGrid &map)
-{
-    // Convert to grid coordinates
-    int column = (pose.position.x - map.info.origin.position.x) / map.info.resolution;
-    int row = (pose.position.y - map.info.origin.position.y) / map.info.resolution;
+{   
+    // NEEDS ROTATION COMPONENT!!!
 
-    // bounds checking
+    // convert to map frame
+    geometry_msgs::msg::Point mapFrame;
+    mapFrame.x = pose.position.x - map.info.origin.position.x;
+    mapFrame.y = pose.position.y - map.info.origin.position.y;
+    mapFrame.z = 0; // axis not used
+    
+    // find grid reference
+    int column = mapFrame.x / map.info.resolution;
+    int row = mapFrame.y / map.info.resolution;
+
+    // Bounds checking
     if (column < 0 || column >= map.info.width || row < 0 || row >= map.info.height)
     {
         RCLCPP_ERROR_STREAM(this->get_logger(), "Pose (" << pose.position.x << ", " << pose.position.y << ") is out of bounds");
+
+        if (column < 0 || column >= map.info.width) 
+        {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Column is:" << column << " [0-" << map.info.width << "]");
+        }
+        
+        if (row < 0 || row >= map.info.height) 
+        {
+            RCLCPP_ERROR_STREAM(this->get_logger(), "Row is:" << row << " [0-" << map.info.height << "]");
+        }
+        
         return -1;
     }
 
     // find index
     int index = (row * map.info.width) + column;
-
-    RCLCPP_INFO_STREAM(this->get_logger(), "Pose: (" << pose.position.x << ", " << pose.position.y << ") | Cell: [" << column << ", " << row << "] | Index: " << index);
-
+   
     return index;
-
-
-    /*
-    THIS IS HERE AS BACKUP BUT I THINK MIGHT BE OVERKILL CURRENTLY
-    // Transform the pose from the world frame to the map frame
-    tf2::Quaternion mapQuat;
-    tf2::fromMsg(map.info.origin.orientation, mapQuat);
-    tf2::Vector3;
-    tf2::Vector3 mapVec;
-    tf2::fromMsg(map.info.origin.position, mapVec);
-    tf2::Transform mapTF(mapQuat, mapVec);
-
-    tf2::Quaternion poseQuat;
-    tf2::fromMsg(pose.orientation, poseQuat);
-    tf2::Vector3 poseVec;
-    tf2::fromMsg(pose.position, poseVec);
-    tf2::Transform poseTF(poseQuat, poseVec);
-    
-    mapTF *= poseTF;
-
-    // Convert to cell units
-    double column = mapTF.getOrigin().x() / map.info.resolution;
-    double row = mapTF.getOrigin().y() / map.info.resolution;
-
-    // Bounds checking
-    if (column < 0 || column >= map.info.width || row < 0 || row >= map.info.height)
-    {
-        RCLCPP_ERROR_STREAM(this->get_logger(), "Pose (" << pose.position.x << ", " << pose.position.y << ") is out of bounds., Equates to cell [" << column << "/" << map.info.width << ", " << row << "/" << map.info.height << "]");
-        return -1;
-    }
-
-    // Convert from (x,y) to row-major index
-    int index = ((map.info.height - row - 1) * map.info.width) + column;
-
-    return index;
-    */
 }
 
 geometry_msgs::msg::Pose pathfinder::cell2cart(const int &index, const nav_msgs::msg::OccupancyGrid &map)
 {
-    geometry_msgs::msg::Pose pose;
+    if (index < 0 || index >= map.info.width * map.info.height) {
+        RCLCPP_ERROR_STREAM(this->get_logger(), "Index " << index << " is out of bounds. [0-" << map.info.width * map.info.height << "]");
+        return geometry_msgs::msg::Pose();
+    }
 
-    // Convert to cartesian coordinates ((grid_cell * resolution) + origin)
-    pose.position.x = ((index % map.info.width) * map.info.resolution) + map.info.origin.position.x;
-    pose.position.y = ((index / map.info.width) * map.info.resolution) + map.info.origin.position.y;
+    // find grid reference
+    int column = index % map.info.width;
+    int row = index / map.info.width;
+
+    // convert to cartesian cordinates in the map frame
+    geometry_msgs::msg::Pose pose;
+    pose.position.x = column * map.info.resolution;
+    pose.position.y = row * map.info.resolution;
+    pose.position.z = 0;    // not used
+
+    // conveert to world frame
+    pose.position.x += map.info.origin.position.x;
+    pose.position.y += map.info.origin.position.y;
 
     return pose;
 }
 
 std::array<int, 8> pathfinder::findAdjacentCells(const int &index, const nav_msgs::msg::OccupancyGrid &map)
 {   
-    // THIS IS WHERE WE ARE UP TO IN OUR REVIEW
-    // I THINK I HAVE MIXED HOW THE ROW MAJOR WORKS SO I AM GOING OVER IT ALL FROM SCRATCH AGAIN
-    // (0,0) IS BOTTOM LEFT WITH X = +1 AND y = +ROW_WIDTH
     std::array<int, 8> adjacentCells = {-1, -1, -1, -1, -1, -1, -1, -1};
+
+    if (index < 0 || index >= map.info.width * map.info.height) {
+        RCLCPP_ERROR_STREAM(this->get_logger(), "Index " << index << " is out of bounds. [0-" << map.info.width * map.info.height << "]");
+        return adjacentCells;
+    }
 
     // limit map size to INT_MAX cells so I dont have to keep changing variables
     if (map.info.width * map.info.height > INT_MAX)
@@ -169,75 +169,69 @@ std::array<int, 8> pathfinder::findAdjacentCells(const int &index, const nav_msg
         return adjacentCells;
     }
 
-    // bound flags
-    bool isLeft = false;
-    bool isRight = false;
+    // find grid reference
+    int column = index % map.info.width;
+    int row = index / map.info.width;
 
-    if (index % map.info.width == 0)
-    {
-        // you are on the left side of the grid
-        isLeft = true;
+    bool isAtTop = false;
+    bool isAtRight = false;
+    bool isAtBottom = false;
+    bool isAtLeft = false;
+
+    if (column == 0) {
+        isAtLeft = true;
     }
 
-    if (index % map.info.width == map.info.width - 1)
-    {
-        // you are on the right side of the grid
-        isRight = true;
+    if (column == map.info.width - 1) {
+        isAtRight = true;
     }
 
-    // Y+
-    if (!(index < map.info.width))
-    {
-        adjacentCells[0] = index - map.info.width;
-
-        // X+
-        if (!isRight)
-        {
-            adjacentCells[1] = index - map.info.width + 1;
-        }
-        
-        // X-
-        if (!isLeft)
-        {
-            adjacentCells[7] = index - map.info.width - 1;
-        }
+    if (row == 0) {
+        isAtBottom = true;
     }
 
-
-    // X+
-    if (!isRight)
-    {
-        adjacentCells[2] = index + 1;
+    if (row == map.info.height - 1) {
+        isAtTop = true;
     }
 
-    // X-
-    if (!isLeft)
-    {
-        adjacentCells[6] = index - 1;
+    if (!isAtTop) {
+        adjacentCells[0] = index + map.info.width;  // N
+    }
+    
+    if (!isAtTop && !isAtRight) {
+        adjacentCells[1] = index + map.info.width + 1;  // NE
     }
 
-    // Y-
-    if (!(index >= map.info.height * map.info.width - map.info.width))
-    {
-        adjacentCells[4] = index + map.info.width;
-
-        if (!isRight)
-        {
-            adjacentCells[3] = index + map.info.width + 1;
-        }
-
-        if (!isLeft)
-        {
-            adjacentCells[5] = index + map.info.width - 1;
-        }
+    if (!isAtRight) {
+        adjacentCells[2] = index + 1;  // E
     }
 
+    if (!isAtBottom && !isAtRight) {
+        adjacentCells[3] = index - map.info.width + 1;  // SE
+    }
+
+    if (!isAtBottom) {
+        adjacentCells[4] = index - map.info.width;  // S
+    }
+
+    if (!isAtBottom && !isAtLeft) {
+        adjacentCells[5] = index - map.info.width - 1;  // SW
+    }
+
+    if (!isAtLeft) {
+        adjacentCells[6] = index - 1;  // W
+    }
+
+    if (!isAtTop && !isAtLeft) {
+        adjacentCells[7] = index + map.info.width - 1;  // NW
+    }
 
     // set all out of bounds cells to -1
     for (int i = 0; i < 8; i++)
     {
-        if (adjacentCells[i] < 0 || adjacentCells[i] >= static_cast<int>(map.info.width * map.info.height))
+        if (adjacentCells[i] < -1 || adjacentCells[i] >= static_cast<int>(map.info.width * map.info.height))
         {
+            RCLCPP_INFO_STREAM(this->get_logger(), "adjacent cell in position " << i << " is out of bounds, setting to -1");
             adjacentCells[i] = -1;
         }
     }
@@ -246,7 +240,10 @@ std::array<int, 8> pathfinder::findAdjacentCells(const int &index, const nav_msg
 }
 
 double pathfinder::findEuklidDistance(const unsigned int &startCell, const unsigned int &goalCell, const nav_msgs::msg::OccupancyGrid &map)
-{
+{   
+    const float diagonalCost = sqrt(2);
+    const char linearCost = 1;
+
     // X and Y distances
     int startColumn = startCell % map.info.width;
     int goalColumn = goalCell % map.info.width;
@@ -258,10 +255,10 @@ double pathfinder::findEuklidDistance(const unsigned int &startCell, const unsig
 
     // find diagonals
     unsigned int diagonalMoves = std::min(xDist, yDist);
-    double cost = diagonalMoves * sqrt(2);
+    double cost = diagonalMoves * diagonalCost;
 
     // find linear moves
-    cost += std::max(xDist, yDist) - diagonalMoves;
+    cost += linearCost * (std::max(xDist, yDist) - diagonalMoves);
 
     return cost;
 }
@@ -289,25 +286,25 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose &
     // check if start and goal poses are valid
     if (startCell == -1)
     {
-        RCLCPP_INFO_STREAM(this->get_logger(), "Start cell is invalid");
+        RCLCPP_ERROR_STREAM(this->get_logger(), "Start cell is invalid");
         return path;
     }
 
     if (startCell == -1)
     {
-        RCLCPP_INFO_STREAM(this->get_logger(), "End cell is invalid");
+        RCLCPP_ERROR_STREAM(this->get_logger(), "End cell is invalid");
         return path;
     }
 
     if (static_cast<int>(map.data[startCell]) > CELL_OCCUPIED_THRESHOLD)
     {
-        RCLCPP_INFO_STREAM(this->get_logger(), "Start cell is occupied");
+        RCLCPP_ERROR_STREAM(this->get_logger(), "Start cell is occupied");
         return path;
     }
 
     if (static_cast<int>(map.data[goalCell]) > CELL_OCCUPIED_THRESHOLD)
     {
-        RCLCPP_INFO_STREAM(this->get_logger(), "goal cell is occupied");
+        RCLCPP_ERROR_STREAM(this->get_logger(), "goal cell is occupied");
         return path;
     }
 
@@ -320,30 +317,28 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose &
     }
 
     // generate new cell data
-    std::vector<cellData> cellDataVector(map.data.size());
+    std::vector<cellData> cellDataVector;
     for (unsigned int i = 0; i < map.data.size(); i++)
     {
         cellDataVector.emplace_back
-                                (
-                                i,                                  // index of cell
-                                false,                              // has this cell been visited (g, h and f cost calculated)
-                                static_cast<int>(map.data.at(i)),   // occupancy value
-                                UINT_MAX,                           // index of parent cell
-                                INFINITY,                           // (cost to get there from start)
-                                INFINITY,                           // (cost to get to goal from here)
-                                INFINITY                            // (G cost + H cost)
-                                );
+                            (
+                            i,                                  // index of cell
+                            false,                              // has this cell been visited (g, h and f cost calculated)
+                            static_cast<int>(map.data.at(i)),   // occupancy value
+                            UINT_MAX,                           // index of parent cell
+                            INFINITY,                           // (cost to get there from start)
+                            INFINITY,                           // (cost to get to goal from here)
+                            INFINITY                            // (G cost + H cost)
+                            );
     }
 
+
     // set start cell data
-    cellDataVector.at(startCell) = {cellDataVector.at(startCell).index,
-                                    true,
-                                    cellDataVector.at(startCell).occupancy,
-                                    startCell,
-                                    0,
-                                    0,
-                                    0
-                                    };
+    cellDataVector.at(startCell).parentCell = startCell;
+    cellDataVector.at(startCell).visited = true;
+    cellDataVector.at(startCell).gCost = 0;
+    cellDataVector.at(startCell).hCost = findEuklidDistance(startCell, goalCell, map);
+    cellDataVector.at(startCell).fCost = cellDataVector.at(startCell).gCost + cellDataVector.at(startCell).hCost;
 
     // list
     std::priority_queue<cellData, std::vector<cellData>, Compare> openList;
@@ -391,7 +386,7 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose &
 
             // set costs
             if (cellDataVector.at(adjacentCells[i]).hCost == INFINITY)
-            {
+            {   
                 cellDataVector.at(adjacentCells[i]).hCost = findEuklidDistance(adjacentCells[i], goalCell, map);
             }
 
@@ -439,7 +434,7 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose &
     // check if goal found
     if (!goalFound)
     {
-        RCLCPP_INFO_STREAM(this->get_logger(), "Cannot find path");
+        RCLCPP_ERROR_STREAM(this->get_logger(), "Cannot find path");
         return path;
     }
 
@@ -464,8 +459,6 @@ geometry_msgs::msg::PoseArray pathfinder::AStar(const geometry_msgs::msg::Pose &
 
     // reverse path
     std::reverse(path.poses.begin(), path.poses.end());
-
-    //publishMarkers(path);
 
     return path;
 }

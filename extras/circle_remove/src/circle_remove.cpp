@@ -13,7 +13,22 @@ void circle_remove::showImages(void) {
     cv::Mat img = laserScanToMat(laserScan_);
 
     // image 1
-    cv::Mat firstImage = img.clone();
-    cv::imshow("Image1", firstImage);
+    cv::Mat image1 = img.clone();
+    cv::imshow("Image1", image1);
+    cv::waitKey(1);
+
+    // image 2
+    cv::Mat image2 = img.clone();
+    // find circle centers
+    // draw green circle at circle center
+    cv::imshow("Image2", image2);
+    cv::waitKey(1);
+
+    // image 3
+    cv::Mat image3 = img.clone();
+    // find circle centers
+    // draw black circle at circle center to "hide"
+    cv::imshow("Image3", image3);
+    cv::waitKey(1);
 }
 
