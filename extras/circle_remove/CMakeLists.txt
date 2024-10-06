@@ -18,10 +18,11 @@ set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "sensor_msgs" "image_tran
 
 set(circle_remove_SRCS
   src/circle_remove.cpp
+  src/main.cpp
 )
 
 set(circle_remove_HDRS
-  include/circle_remove.h
+  src/circle_remove.h
 )
 
 add_executable(circle_remove ${circle_remove_SRCS} ${circle_remove_MOCS})

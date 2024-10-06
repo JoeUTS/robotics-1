@@ -6,6 +6,7 @@
 #include <rclcpp/rclcpp.hpp>
 #include <sensor_msgs/msg/laser_scan.hpp>
 #include <geometry_msgs/msg/twist.hpp>
+#include <geometry_msgs/msg/point.hpp>
 #include <opencv2/opencv.hpp>
 #include <vector>
 
@@ -19,7 +20,10 @@ public:
     circle_remove(void);
 
     void scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg);
-    
+
+    void showImages(void);
+
+    cv::Mat laserScanToMat(const sensor_msgs::msg::LaserScan &laserScan);
 };
 
 #endif // CIRCLEREMOVE_H
