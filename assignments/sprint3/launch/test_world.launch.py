@@ -14,13 +14,14 @@ def generate_launch_description():
 
     # settings
     # starting pose
-    x_pose = LaunchConfiguration('x_pose', default='-2')
-    y_pose = LaunchConfiguration('y_pose', default='0')
+    x_pose = LaunchConfiguration('x_pose', default='5')
+    y_pose = LaunchConfiguration('y_pose', default='-7')
     # launch parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     use_lifestyle_autostart = LaunchConfiguration('autostart', default='true')
     use_map_subscribe = LaunchConfiguration('map_subscribe_transient_local', default='false')
-    lifecycle_nodes = ['map_server', 'amcl']
+    #lifecycle_nodes = ['map_server', 'amcl']
+    lifecycle_nodes = ['map_server']
     # filepaths
     robotLaunch = os.path.join(get_package_share_directory('turtlebot3_gazebo'), 'launch')
     nav2Launch = os.path.join(get_package_share_directory('nav2_bringup'), 'launch')
@@ -37,7 +38,7 @@ def generate_launch_description():
     slam_params_file = os.path.join(
         get_package_share_directory('sprint3'),
         'config',
-        'mapper_params_online_async.yaml'
+        'my_ma_mapper_params.yaml'
     )
     map_file = os.path.join(
         get_package_share_directory('sprint3'),
@@ -143,7 +144,7 @@ def generate_launch_description():
     ld.add_action(rviz)
     ld.add_action(slam_node)
     ld.add_action(map_server)
-    ld.add_action(amcl)
+    #ld.add_action(amcl)
     ld.add_action(nav2)
     ld.add_action(lifecycle_manager_cmd)
     ld.add_action(gzserver_cmd)

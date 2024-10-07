@@ -21,11 +21,13 @@
         "*.tcc": "cpp",
         "bitset": "cpp",
         "chrono": "cpp",
+        "cinttypes": "cpp",
         "codecvt": "cpp",
         "compare": "cpp",
         "complex": "cpp",
         "concepts": "cpp",
         "condition_variable": "cpp",
+        "coroutine": "cpp",
         "cstdint": "cpp",
         "deque": "cpp",
         "forward_list": "cpp",
@@ -47,6 +49,7 @@
         "random": "cpp",
         "ratio": "cpp",
         "regex": "cpp",
+        "source_location": "cpp",
         "string_view": "cpp",
         "system_error": "cpp",
         "tuple": "cpp",
@@ -72,12 +75,8 @@
         "streambuf": "cpp",
         "thread": "cpp",
         "cfenv": "cpp",
-        "cinttypes": "cpp",
         "typeindex": "cpp",
         "typeinfo": "cpp",
-        "variant": "cpp",
-        "coroutine": "cpp",
-        "source_location": "cpp",
-        "*.ipp": "cpp"
+        "variant": "cpp"
     }
 }

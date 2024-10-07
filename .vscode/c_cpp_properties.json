@@ -6,7 +6,8 @@
                 "${workspaceFolder}/**",
                 "/opt/ros/humble/include/**",
                 "/home/joseph/ros2_ws/**",
-                "/usr/include/**"
+                "/usr/include/**",
+                "/home/joseph/git/**"
             ],
             "defines": [],
             "compilerPath": "/usr/bin/gcc",

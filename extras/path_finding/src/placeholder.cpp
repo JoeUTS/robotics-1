@@ -19,8 +19,8 @@ placeholder::placeholder() : Node("pathfinder_placeholder") {
 
     // timer
     timer_ = this->create_wall_timer(
-            std::chrono::milliseconds(1000),
-            std::bind(&placeholder::timerCallback, this));
+        std::chrono::milliseconds(1000),
+        std::bind(&placeholder::timerCallback, this));
 }
 
 void placeholder::mapCallback(const std::shared_ptr<nav_msgs::msg::OccupancyGrid> msg) {

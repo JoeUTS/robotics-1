@@ -9,12 +9,13 @@ endif()
 find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(image_transport REQUIRED)
 find_package(cv_bridge REQUIRED)
 find_package(OpenCV REQUIRED)
 
-set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "sensor_msgs" "image_transport" "cv_bridge" "OpenCV")
+set(dependencies "ament_index_cpp" "rclcpp" "std_msgs" "nav_msgs" "sensor_msgs" "image_transport" "cv_bridge" "OpenCV")
 
 set(circle_remove_SRCS
   src/circle_remove.cpp

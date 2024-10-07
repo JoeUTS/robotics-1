@@ -15,6 +15,9 @@ class slam : public rclcpp::Node {
 public:
     slam();
 
+    rclcpp::TimerBase::SharedPtr timer_;     //!< Timer
+    
+
 };
 
 #endif // SLAM_H
