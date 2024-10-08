@@ -21,7 +21,7 @@ slam_toolbox:
     # or at the dock, but they are mutually exclusive, if pose is given
     # will use pose
     map_file_name: /home/joseph/ros2_ws/install/sprint3/share/sprint3/map/my_ma
-    map_start_pose: [5.0, -7.0, 0.0]
+    map_start_pose: [9.0, -9.0, 0.0]
     map_start_at_dock: false
 
     debug_logging: false

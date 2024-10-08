@@ -1,18 +1,27 @@
 #include "circle_remove.h"
 
 circle_remove::circle_remove() : Node("circle_remove") {
-    mapSet = false;
+    // map
+    mapSet_ = false;
 
-    // subscribe to map
     map_sub_ = this->create_subscription<nav_msgs::msg::OccupancyGrid>(
         "/map", 10, std::bind(&circle_remove::mapCallback, this, std::placeholders::_1));
 
-    // subscribe to odometry
+    // odometry
     odo_sub_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "/odom", 10, std::bind(&circle_remove::odoCallback,this,std::placeholders::_1));
 
+    // laserscan
     laserscan_sub_ = this->create_subscription<sensor_msgs::msg::LaserScan>(
         "/scan", 10, std::bind(&circle_remove::scanCallback, this, std::placeholders::_1));
+
+    // goals
+    goal_sub_ = this->create_subscription<geometry_msgs::msg::Pose>(
+        "/goalPose", 10, std::bind(&circle_remove::goalCallback,this,std::placeholders::_1));
+    
+    // navigation
+    nav_client_ = rclcpp_action::create_client<nav2_msgs::action::NavigateToPose>(
+      this, "navigate_to_pose");
 
     // timer
     const int fps = 60;
@@ -26,44 +35,78 @@ circle_remove::circle_remove() : Node("circle_remove") {
 void circle_remove::mapCallback(const std::shared_ptr<nav_msgs::msg::OccupancyGrid> msg) {
     map_ = *msg;
     mapImage_ = mapToMat(map_);
-    mapSet = true;
+    mapSet_ = true;
 }
 
-void circle_remove::scanCallback(const sensor_msgs::msg::LaserScan::SharedPtr msg) {
+void circle_remove::scanCallback(const std::shared_ptr<sensor_msgs::msg::LaserScan> msg) {
     laserScan_ = *msg;
 
-    std::vector<cv::Point> foundObjects = objectDetect(*msg);
+    // add found objects to list
+    if (objects_.size() < 1) {
+        // set object
+        objects_ = objectDetect(*msg);
+    } else {
+        std::vector<cv::Point> foundObjects = objectDetect(*msg);
+        
+        double tollerance = 0.1;    // [m]
 
-    double tollerance = 0.1;    // [m]
-
-    for (cv::Point newObject : foundObjects) { 
-        bool onList = false;
-
-        // filter existing objects
-        if (objects_.size() < 1) {
-            return;
-        }
-
-        for (cv::Point oldObject : objects_) {
-            if (std::hypot(newObject.x - oldObject.x - map_.info.origin.position.x, newObject.y - oldObject.y - map_.info.origin.position.y) < tollerance) {
-                onList = true;
+        for (cv::Point newObject : foundObjects) { 
+            // filter existing objects
+            for (cv::Point oldObject : objects_) {
+                if (std::hypot(newObject.x - oldObject.x, newObject.y - oldObject.y) > tollerance) {
+                    // add to list if greater than tollerance
+                    objects_.push_back(newObject);
+                } 
             }
-        }
-
-        if (!onList) {
-            objects_.push_back(newObject);
         }
     }
 }
 
 void circle_remove::odoCallback(const std::shared_ptr<nav_msgs::msg::Odometry> msg) {
     odo_ = *msg;
+    // add an odo set
+}
+
+void circle_remove::goalCallback(const std::shared_ptr<geometry_msgs::msg::Pose> msg) {
+    goalPose_ = *msg;
+    goalSet_ = true;
 }
 
 void circle_remove::timerCallback(void) {
-    if (mapSet) {
+    if (mapSet_) {
         showImages();
     }
+}
+
+void circle_remove::sendGoal(const geometry_msgs::msg::Pose &goal) {
+    // Wait for the action server to be available
+    while (!nav_client_->wait_for_action_server(std::chrono::seconds(1))) {
+      RCLCPP_INFO(this->get_logger(), "Waiting for action server...");
+    }
+
+    nav2_msgs::action::NavigateToPose::Goal goalMsg;
+    goalMsg.pose.header.frame_id = "map";
+    goalMsg.pose.header.stamp = this->now();
+    goalMsg.pose.pose.position.x = goal.position.x;
+    goalMsg.pose.pose.position.y = goal.position.y;
+    goalMsg.pose.pose.orientation.w = goal.orientation.w;
+    goalMsg.pose.pose.orientation.x = goal.orientation.x;
+    goalMsg.pose.pose.orientation.y = goal.orientation.y;
+    goalMsg.pose.pose.orientation.z = goal.orientation.z;
+
+    // Send the goal
+    auto send_goal_options = rclcpp_action::Client<nav2_msgs::action::NavigateToPose>::SendGoalOptions();
+    send_goal_options.goal_response_callback =
+      [this](const rclcpp_action::ClientGoalHandle<nav2_msgs::action::NavigateToPose>::SharedPtr goal_handle) {
+            //RCLCPP_INFO(this->get_logger(), "Goal accepted!");
+      };
+
+    send_goal_options.result_callback =
+        [this](const rclcpp_action::ClientGoalHandle<nav2_msgs::action::NavigateToPose>::WrappedResult & result) {
+            //RCLCPP_INFO(this->get_logger(), "Goal result received!");
+        };
+
+    auto goal_handle = nav_client_->async_send_goal(goalMsg, send_goal_options);
 }
 
 cv::Mat circle_remove::mapToMat(const nav_msgs::msg::OccupancyGrid &map) {
@@ -150,8 +193,8 @@ cv::Point circle_remove::findCenter(const cv::Point &p1, const cv::Point &p2, co
 }
 
 std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::LaserScan &laserScan) {
-    const double diameter = 0.3;        // [m]
-    const double diameterError = 0.05;  // [m]
+    const double diameter = 0.3;       // [m]
+    const double diameterError = 0.1;  // [m]
 
     std::vector<cv::Point> laserReturns = laser2Points(laserScan);
 
@@ -168,15 +211,24 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
             // nothing
             if (inObject) {
                 // end object
-
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Ending Object");
+                
                 // find diameter
                 double distance = std::hypot(laserReturns.at(startIndex).x - laserReturns.at(i - 1).x, laserReturns.at(startIndex).y - laserReturns.at(i - 1).y);
 
                 // check if object is big enough
                 if (std::abs(distance - diameter) < diameterError) {
-                    // we have found the right sized object!!!
+                    // we have found the right sized object!
+                    // find center
                     int midIndex = startIndex + ((i - startIndex) / 2);
-                    objects.emplace_back(findCenter(laserReturns.at(startIndex), laserReturns.at(i - 1), laserReturns.at(midIndex)));
+                    cv::Point center = findCenter(laserReturns.at(startIndex), laserReturns.at(i - 1), laserReturns.at(midIndex));
+                    
+                    // convert to world frame
+                    center.x += odo_.pose.pose.position.x;
+                    center.y += odo_.pose.pose.position.y;
+                    objects.emplace_back(center);
+                }  else {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "wrong size object: " << distance);
                 }
 
                 inObject = false;
@@ -185,6 +237,7 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
 
         } else if (!inObject) {
             // start object
+            RCLCPP_ERROR_STREAM(this->get_logger(), "new Object");
             startIndex = i;
             inObject = true;
         } else {
@@ -193,6 +246,7 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
 
             if (distance > newObjectThesh) {
                 // new object
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Ending Object");
 
                 // find diameter
                 double distance = std::hypot(laserReturns.at(startIndex).x - laserReturns.at(i - 1).x, laserReturns.at(startIndex).y - laserReturns.at(i - 1).y);
@@ -200,10 +254,19 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
                 // check if object is big enough
                 if (std::abs(distance - diameter) < diameterError) {
                     // we have found the right sized object!!!
+                    // find center
                     int midIndex = startIndex + ((i - startIndex) / 2);
-                    objects.emplace_back(findCenter(laserReturns.at(startIndex), laserReturns.at(i - 1), laserReturns.at(midIndex)));
+                    cv::Point center = findCenter(laserReturns.at(startIndex), laserReturns.at(i - 1), laserReturns.at(midIndex));
+                    
+                    // convert to world frame
+                    center.x += odo_.pose.pose.position.x;
+                    center.y += odo_.pose.pose.position.y;
+                    objects.emplace_back(center);
+                } else {
+                    RCLCPP_ERROR_STREAM(this->get_logger(), "wrong size object: " << distance);
                 }
 
+                RCLCPP_ERROR_STREAM(this->get_logger(), "new Object");
                 startIndex = i;
             }
         }
@@ -214,25 +277,21 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
     return objects;
 }
 
+cv::Point circle_remove::worldPoseToMap(const geometry_msgs::msg::Pose &pose, const nav_msgs::msg::OccupancyGrid &map) {
+    cv::Point mapPoint;
+    mapPoint.x = (pose.position.x - map.info.origin.position.x) / map.info.resolution;
+    mapPoint.y = map.info.height - (pose.position.y - map.info.origin.position.y) / map.info.resolution;
+
+    return mapPoint;
+}
+
 void circle_remove::showImages(void) {
     // set up image
     cv::Mat mainImage;
     cv::cvtColor(mapImage_, mainImage, cv::COLOR_GRAY2BGR);
-    
-    // robot location
-    cv::Point robotLocation;
-    robotLocation.x = (odo_.pose.pose.position.x - map_.info.origin.position.x) / map_.info.resolution;
-    robotLocation.y = map_.info.height - (odo_.pose.pose.position.y - map_.info.origin.position.y) / map_.info.resolution;
-
-    cv::circle( mainImage,                           // image to draw on
-                robotLocation,                       // circle center
-                2,                                   // circle radius
-                cv::Scalar(0, 0, 255),               // colour
-                -1);                                 // line thickness (-1 is filled)
 
     // circle finding
     for (const cv::Point &center : objects_) {
-        // Draw the circle on image 2
         cv::circle( mainImage,                           // image to draw on
                     center,                              // circle center
                     5,                                   // circle radius (WE NEED TO FIGURE THIS ONE OUT!!!)
@@ -245,6 +304,28 @@ void circle_remove::showImages(void) {
                     cv::Scalar(255, 0, 0),               // colour
                     -1);                                 // line thickness (-1 is filled)
     }
+
+    // path finding
+    if (goalSet_) {
+        sendGoal(goalPose_);
+
+        cv::Point goalPoint = worldPoseToMap(goalPose_, map_);
+        
+        cv::circle( mainImage,              // image to draw on
+                    goalPoint,          // circle center
+                    6,                      // circle radius
+                    cv::Scalar(0, 0, 255),  // colour
+                    1);                     // line thickness (-1 is filled)
+    }
+
+    // robot location
+    cv::Point robotLocation = worldPoseToMap(odo_.pose.pose, map_);
+    
+    cv::circle( mainImage,              // image to draw on
+                robotLocation,          // circle center
+                2,                      // circle radius
+                cv::Scalar(255, 0, 0),  // colour
+                -1);                    // line thickness (-1 is filled)
     
     cv::Mat newImage;
     cv::resize(mainImage, newImage, cv::Size(0, 0), 2, 2, cv::INTER_NEAREST);

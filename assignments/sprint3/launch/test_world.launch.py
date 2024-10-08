@@ -14,8 +14,8 @@ def generate_launch_description():
 
     # settings
     # starting pose
-    x_pose = LaunchConfiguration('x_pose', default='5')
-    y_pose = LaunchConfiguration('y_pose', default='-7')
+    x_pose = LaunchConfiguration('x_pose', default='9')
+    y_pose = LaunchConfiguration('y_pose', default='-9')
     # launch parameters
     use_sim_time = LaunchConfiguration('use_sim_time', default='true')
     use_lifestyle_autostart = LaunchConfiguration('autostart', default='true')
