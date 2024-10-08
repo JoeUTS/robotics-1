@@ -1,0 +1,37 @@
+/*!
+
+*/
+
+// without this gap between two doxygen definition, the last group does not get
+// populated properly for some reason.
+
+/*! \mainpage Sprint 3:
+Sprint 3 for Robotics 1.
+
+\section info project Brief:
+To design a search a rescue robot.
+
+\section index Index:
+- \subpage install
+- \subpage run
+\section author Author
+Joseph Tarbath (14163885) \n
+joseph.a.tarbath@student.uts.edu.au
+*/
+
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*! \page install Installation
+Nil formal installation required. \n
+\n
+Nil build files included, code will need to be built via colcon build.
+*/
+
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
+
+/*! \page run How to run
+\section step1 Step 1: Start simulation
+- ros2 launch sprint3 test_world.py
+*/
+
+//-------------------------------------------------------------------------------------------------------------------------------------------------------
