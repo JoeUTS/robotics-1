@@ -198,6 +198,100 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
 
     std::vector<cv::Point> laserReturns = laser2Points(laserScan);
 
+    std::vector<std::pair<unsigned int, unsigned int>> objectIndexes;
+    std::pair<unsigned int, unsigned int> tempPair = std::make_pair(UINT_MAX, UINT_MAX);
+    bool inObject = false;
+    bool wrapStart = false;
+    double newObjectThesh = 0.075;      // [m] distance between returns to consider new.
+
+    for (unsigned int i = 0; i < laserReturns.size(); i++) {
+        cv::Point currentPoint = laserReturns.at(i);
+
+        if (i == 0 && currentPoint.x != 0 && currentPoint.y != 0) {
+            // starting on object, need to wrap around
+            wrapStart = true;
+        }
+
+        if (currentPoint.x == 0 && currentPoint.y == 0) {
+            // nothing
+            if (inObject) {
+                // end object
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Ending Object");
+                tempPair.second = i - 1;
+                objectIndexes.push_back(tempPair);
+
+                inObject = false;
+                tempPair.first = UINT_MAX;
+                tempPair.second = UINT_MAX;
+            }
+
+        } else if (!inObject) {
+            // start object
+            RCLCPP_ERROR_STREAM(this->get_logger(), "new Object");
+            tempPair.first = i;
+            inObject = true;
+
+        } else {
+            // check if same object
+            double distance = std::hypot(laserReturns.at(i - 1).x - laserReturns.at(i).x, laserReturns.at(i - 1).y - laserReturns.at(i).y);
+
+            if (distance > newObjectThesh) {
+                // new object
+                RCLCPP_ERROR_STREAM(this->get_logger(), "Ending Object");
+                tempPair.second = i - 1;
+                objectIndexes.push_back(tempPair);
+
+                RCLCPP_ERROR_STREAM(this->get_logger(), "new Object");
+                tempPair.first = i;
+                tempPair.second = UINT_MAX;
+            }
+        }
+    }
+
+    // if still in object, end it
+    if (inObject) {
+        if (wrapStart) {
+            // move first object start index to current object start index
+            objectIndexes.at(0).first = tempPair.first;
+        } else {
+            tempPair.second = laserReturns.size() - 1;
+            objectIndexes.push_back(tempPair);
+        }
+    }
+
+    // filter wrong sized objects
+    std::vector<cv::Point> objectPoints;
+    for (unsigned int i = 0; i < objectIndexes.size(); i++) {
+        double distance = std::hypot(laserReturns.at(objectIndexes.at(i).first).x - laserReturns.at(objectIndexes.at(i).second).x, laserReturns.at(objectIndexes.at(i).first).y - laserReturns.at(objectIndexes.at(i).second).y);
+
+        if (distance - diameter <= diameterError) {
+            // we have found the right sized object, add it's points to the list
+            for (unsigned int j = objectIndexes.at(i).first; j <= objectIndexes.at(i).second; j++) {
+                objectPoints.push_back(laserReturns.at(j));
+            }
+        }
+    }
+
+    // find cicles
+    unsigned int imageSize = laserScan.range_max * 100;
+    cv::Mat objectMat = cv::Mat::zeros(imageSize, imageSize, CV_8UC1);
+    cv::Point previousPoint;
+
+    for (unsigned int i = 0; i < objectPoints.size(); i++) {
+        cv::Point currentPoint = objectPoints.at(i);
+
+        if (i > 0) {
+            cv::line(objectMat, previousPoint, currentPoint, cv::Scalar(255), 1);
+        }
+
+        previousPoint = currentPoint;
+    }
+
+    std::vector<cv::Vec3f> circles;
+    cv::HoughCircles(objectMat, circles, cv::HOUGH_GRADIENT, 1, 10, 100, 30, 0, 0);
+
+
+    /*
     // find objects
     std::vector<cv::Point> objects;     // holds object centers
     bool inObject = false;              // represents if currently examining an object
@@ -270,7 +364,7 @@ std::vector<cv::Point> circle_remove::objectDetect(const sensor_msgs::msg::Laser
                 startIndex = i;
             }
         }
-    }
+    */
 
     // needs fix for wrap around issues
 
